@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
     bf.close();
 
     int opt = system( ("opt -S -O3 " + filename + ".ll -o " + filename + ".opt.ll").c_str() );
-    if(opt != 0) return -1;
+    if(opt != 0) return 1;
 
     int ll = system( ("llc " + filename + ".opt.ll").c_str() );
     if(ll != 0) return 1;
