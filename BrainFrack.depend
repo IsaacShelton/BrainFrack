@@ -1,0 +1,7 @@
+# depslib dependency file v1.0
+1477094565 source:c:\users\isaac\google drive\dockysoft developing\brainfrack\main.cpp
+	<string>
+	<fstream>
+	<stdlib.h>
+	<iostream>
+
