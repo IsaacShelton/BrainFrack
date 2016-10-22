@@ -5,6 +5,7 @@
 
 #include <string>
 #include <fstream>
+#include <sstream>
 #include <stdlib.h>
 #include <iostream>
 
@@ -15,25 +16,56 @@ std::string filename_name(std::string filename){
     else return filename.substr(filename.find_last_of("\\/") + 1, filename.length() - filename.find_last_of("\\/"));
 }
 
-void compile_token(std::ifstream& bf, std::ofstream& ir, char& token){
+std::string to_str(unsigned int i){
+    std::ostringstream convert; convert << i;
+    return convert.str();
+}
+
+void compile_token(std::ifstream& bf, std::ofstream& ir, char& token, unsigned int& next_loop_index){
     switch(token){
     case '+':
-        ir << "call void @bf_i(i8* %cp, i32* %cip)" << "\n";
+        ir << "call void @bf_i(i8* %csp, i32* %cip)\n";
         break;
     case '-':
-        ir << "call void @bf_d(i8* %cp, i32* %cip)" << "\n";
+        ir << "call void @bf_d(i8* %csp, i32* %cip)\n";
         break;
     case '>':
-        ir << "call void @bf_ii(i32* %cip)" << "\n";
+        ir << "call void @bf_ii(i32* %cip)\n";
         break;
     case '<':
-        ir << "call void @bf_di(i32* %cip)" << "\n";
+        ir << "call void @bf_di(i32* %cip)\n";
         break;
     case '.':
-        ir << "call void @bf_put(i8* %cp, i32* %cip)" << "\n";
+        ir << "call void @bf_put(i8* %csp, i32* %cip)\n";
         break;
     case ',':
-        ir << "call void @bf_get(i8* %cp, i32* %cip)" << "\n";
+        ir << "call void @bf_get(i8* %csp, i32* %cip)\n";
+        break;
+    case '[':
+        {
+            std::string loop_index = to_str(next_loop_index);
+            next_loop_index++;
+
+            ir << "br label %c" + loop_index + "\n";
+            ir << "c" + loop_index + ":\n";
+            ir << "%ci" + loop_index + " = load i32, i32* %cip\n";
+            ir << "%cp" + loop_index +" = getelementptr i8, i8* %csp, i32 %ci" + loop_index + "\n";
+            ir << "%cv" + loop_index + " = load i8, i8* %cp" + loop_index + "\n";
+            ir << "%z" + loop_index + " = icmp eq i8 %cv" + loop_index + ", 0\n";
+            ir << "br i1 %z" + loop_index + ", label %e" + loop_index + ", label %b" + loop_index + "\n";
+            ir << "b" + loop_index + ":\n";
+
+            while(bf.get(token) and token != ']'){
+                compile_token(bf, ir, token, next_loop_index);
+            }
+
+            ir << "br label %c" + loop_index + "\n";
+            ir << "e" + loop_index + ":\n";
+        }
+        break;
+    case ']':
+        std::cerr << "Mismatched braces" << std::endl;
+        exit(1);
         break;
     }
 }
@@ -42,6 +74,7 @@ int main(int argc, char** argv) {
     std::ifstream bf;
     std::ofstream ir;
     std::string filename;
+    unsigned int next_loop_index = 0;
 
     if(argc != 2) {
         std::cerr << "bfc <filename>" << std::endl;
@@ -118,16 +151,16 @@ int main(int argc, char** argv) {
     ir << "}\n";
 
     ir << "define i32 @main() {\n";
-    ir << "%cp = call i8* @calloc(i32 1024, i32 1)\n";
+    ir << "%csp = call i8* @calloc(i32 30000, i32 1)\n";
     ir << "%cip = alloca i32\n";
-    ir << "store i32 97, i32* %cip\n";
+    ir << "store i32 0, i32* %cip\n";
 
     char token;
     while(bf.get(token)){
-        compile_token(bf, ir, token);
+        compile_token(bf, ir, token, next_loop_index);
     }
 
-    ir << "call void @free(i8* %cp)\n";
+    ir << "call void @free(i8* %csp)\n";
     ir << "ret i32 0\n";
     ir << "}\n";
 
@@ -140,7 +173,7 @@ int main(int argc, char** argv) {
     int ll = system( ("llc " + filename + ".opt.ll").c_str() );
     if(ll != 0) return 1;
 
-    int gcc = system( ("g++ C:\\MinGW64\\lib\\gcc\\x86_64-w64-mingw32\\5.3.0\\libstdc++.a " + filename + ".opt.s -o " + filename + ".exe").c_str() );
+    int gcc = system( ("gcc C:\\MinGW64\\lib\\gcc\\x86_64-w64-mingw32\\5.3.0\\libstdc++.a " + filename + ".opt.s -o " + filename + ".exe").c_str() );
     if(gcc != 0) return 1;
 
     std::cout << "Successfully Created '" + filename_name(filename) + ".exe'" << std::endl;
