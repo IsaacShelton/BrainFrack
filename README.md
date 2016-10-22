@@ -2,9 +2,9 @@
 ## Compiles BF code into an executable using LLVM
 
 The compiler is written in c++. It emits LLVM-IR which is then optimized and turned into a native executable.
-source - file.bf
-llvm-ir - file.bf.ll
-optimized - file.bf.opt.ll
-executable - file.bf.exe
-
+<br>source - file.bf
+<br>llvm-ir - file.bf.ll
+<br>optimized - file.bf.opt.ll
+<br>executable - file.bf.exe
+<br><br>
 bfc &lt;filename&gt;
